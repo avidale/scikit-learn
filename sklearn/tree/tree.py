@@ -40,6 +40,7 @@ from ._criterion import Criterion
 from ._splitter import Splitter
 from ._tree import DepthFirstTreeBuilder
 from ._tree import BestFirstTreeBuilder
+from ._tree import TreePrunner
 from ._tree import Tree
 from . import _tree, _splitter, _criterion
 
@@ -92,7 +93,9 @@ class BaseDecisionTree(six.with_metaclass(ABCMeta, BaseEstimator)):
                  min_impurity_decrease,
                  min_impurity_split,
                  class_weight=None,
-                 presort=False):
+                 presort=False,
+                 pruning = None,
+                 alpha = None):
         self.criterion = criterion
         self.splitter = splitter
         self.max_depth = max_depth
@@ -106,6 +109,8 @@ class BaseDecisionTree(six.with_metaclass(ABCMeta, BaseEstimator)):
         self.min_impurity_split = min_impurity_split
         self.class_weight = class_weight
         self.presort = presort
+        self.pruning = pruning
+        self.alpha = alpha
 
     def fit(self, X, y, sample_weight=None, check_input=True,
             X_idx_sorted=None):
@@ -359,6 +364,13 @@ class BaseDecisionTree(six.with_metaclass(ABCMeta, BaseEstimator)):
                                            min_impurity_split)
 
         builder.build(self.tree_, X, y, sample_weight, X_idx_sorted)
+        
+        # Prune tree
+        if self.pruning is not None: 
+            # ToDo: Need to check pruning!
+            # ToDo: Need to check alpha!
+            prunner = TreePrunner(splitter, self.alpha) 
+            prunner.prune(self.tree_, X, y, sample_weight, X_idx_sorted) # is X_idx_sorted really needed?
 
         if self.n_outputs_ == 1:
             self.n_classes_ = self.n_classes_[0]
@@ -729,7 +741,9 @@ class DecisionTreeClassifier(BaseDecisionTree, ClassifierMixin):
                  min_impurity_decrease=0.,
                  min_impurity_split=None,
                  class_weight=None,
-                 presort=False):
+                 presort=False,
+                 pruning=None,
+                 alpha=None):
         super(DecisionTreeClassifier, self).__init__(
             criterion=criterion,
             splitter=splitter,
@@ -743,7 +757,9 @@ class DecisionTreeClassifier(BaseDecisionTree, ClassifierMixin):
             random_state=random_state,
             min_impurity_decrease=min_impurity_decrease,
             min_impurity_split=min_impurity_split,
-            presort=presort)
+            presort=presort,
+            pruning=pruning,
+            alpha=alpha)
 
     def fit(self, X, y, sample_weight=None, check_input=True,
             X_idx_sorted=None):
@@ -1065,7 +1081,9 @@ class DecisionTreeRegressor(BaseDecisionTree, RegressorMixin):
                  max_leaf_nodes=None,
                  min_impurity_decrease=0.,
                  min_impurity_split=None,
-                 presort=False):
+                 presort=False,
+                 pruning=None,
+                 alpha=None):
         super(DecisionTreeRegressor, self).__init__(
             criterion=criterion,
             splitter=splitter,
@@ -1078,7 +1096,9 @@ class DecisionTreeRegressor(BaseDecisionTree, RegressorMixin):
             random_state=random_state,
             min_impurity_decrease=min_impurity_decrease,
             min_impurity_split=min_impurity_split,
-            presort=presort)
+            presort=presort,
+            pruning=pruning,
+            alpha=alpha)
 
     def fit(self, X, y, sample_weight=None, check_input=True,
             X_idx_sorted=None):

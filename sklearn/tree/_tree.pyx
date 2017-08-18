@@ -500,6 +500,24 @@ cdef class BestFirstTreeBuilder(TreeBuilder):
         return 0
 
 
+        
+cdef class TreePrunner:
+    """Prune a decision tree with weakest link pruning.
+
+    The best node to prune is given by the node at the frontier that has the
+    lowest impurity improvement.
+    """
+    def __cinit__(self, Splitter splitter, DOUBLE_t alpha):
+        self.splitter = splitter
+        self.alpha = alpha
+
+    cpdef prune(self, Tree tree, object X, np.ndarray y,
+                np.ndarray sample_weight=None,
+                np.ndarray X_idx_sorted=None):
+        """Prune a decision tree with the training set (X, y)."""
+        pass
+
+        
 # =============================================================================
 # Tree
 # =============================================================================

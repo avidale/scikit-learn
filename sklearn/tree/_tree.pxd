@@ -103,3 +103,7 @@ cdef class TreeBuilder:
                 np.ndarray sample_weight=*,
                 np.ndarray X_idx_sorted=*)
     cdef _check_input(self, object X, np.ndarray y, np.ndarray sample_weight)
+
+cdef class TreePrunner:
+    cdef Splitter splitter              # Splitting algorithm
+    cdef DOUBLE_t alpha                 # Cost of a leaf in terms of total impurity
