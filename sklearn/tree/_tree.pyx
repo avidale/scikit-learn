@@ -506,6 +506,9 @@ cdef class TreePrunner:
 
     The best node to prune is given by the node that has the
     lowest impurity improvement.
+
+    Prunner may be reused multiple times, to create a sequence of trees.
+    In this case, copy of tree is returned.
     """
     def __cinit__(self, Splitter splitter, DOUBLE_t alpha):
         self.splitter = splitter
@@ -520,14 +523,16 @@ cdef class TreePrunner:
             how to deallocate a node?????
         how to safely copy a tree?????
     """
-    def prune(self, Tree tree, object X, np.ndarray y,
-                np.ndarray sample_weight=None,
-                np.ndarray X_idx_sorted=None):
+
+    def prune(self, tree, X, y, sample_weight=None, copy_tree=False):
         """Prune a decision tree with the training set (X, y).
         """
-        pass
-        """
-        heap = UpdateableHeap()
+        # todo: separate initialization from one pruning step
+
+        if copy_tree:
+            tree = deepcopy(tree) # todo: import deepcopy
+
+        heap = UpdateableHeap() # todo: import UpdateableHeap
         for node in tree.nodes:
             calculate size of a subtree
             calculate impurity in the node
@@ -540,11 +545,15 @@ cdef class TreePrunner:
             self.remove_node(node, tree)
 
         self.heap = heap # will need it for future prunning
-        """
+
+        if copy_tree:
+            return tree
 
 
-    '''
+
+
     def recursively_remove_children(self, node, tree, heap):
+        # todo: do not mix indices and actual nodes
         if node.left_child != _TREE_LEAF:
             self.recursively_remove_children(self, node.left_child, tree, heap)
         if node.right_child != _TREE_LEAF:

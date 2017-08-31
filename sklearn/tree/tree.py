@@ -505,6 +505,7 @@ class BaseDecisionTree(six.with_metaclass(ABCMeta, BaseEstimator)):
     
     def prune_one_step(self, X, y, check_input=True):
         """Returns its subtree with one (or more, with equal losses) node deleted      
+        """
         check_is_fitted(self, 'tree_')
         X = self._validate_X_predict(X, check_input)
         # ToDo: check y
