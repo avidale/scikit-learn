@@ -504,19 +504,68 @@ cdef class BestFirstTreeBuilder(TreeBuilder):
 cdef class TreePrunner:
     """Prune a decision tree with weakest link pruning.
 
-    The best node to prune is given by the node at the frontier that has the
+    The best node to prune is given by the node that has the
     lowest impurity improvement.
     """
     def __cinit__(self, Splitter splitter, DOUBLE_t alpha):
         self.splitter = splitter
         self.alpha = alpha
 
-    cpdef prune(self, Tree tree, object X, np.ndarray y,
+    """
+    Need to know:
+        how a Node is represented in a complete Tree? - a small struct with children and stats
+        how to calculate impurity in a Node? - it is saved in Tree.impurity[i]
+        how to delete a Node from a Tree but keep the Tree correct? ??????????
+            what a correct tree needs for its methods to work??????
+            how to deallocate a node?????
+        how to safely copy a tree?????
+    """
+    def prune(self, Tree tree, object X, np.ndarray y,
                 np.ndarray sample_weight=None,
                 np.ndarray X_idx_sorted=None):
-        """Prune a decision tree with the training set (X, y)."""
+        """Prune a decision tree with the training set (X, y).
+        """
+        pass
+        """
+        heap = UpdateableHeap()
+        for node in tree.nodes:
+            calculate size of a subtree
+            calculate impurity in the node
+            calculate impurity in the subtree
+            add node to the heap with key = alphacriterion
+        while not self.stopping_criterion(heap):
+            node = heap.get_and_remove_min()
+            self.recursively_remove_children(node, tree, heap)
+            self.recursively_update_parent_alphacriterion(node, tree, heap)
+            self.remove_node(node, tree)
+
+        self.heap = heap # will need it for future prunning
+        """
+
+
+    '''
+    def recursively_remove_children(self, node, tree, heap):
+        if node.left_child != _TREE_LEAF:
+            self.recursively_remove_children(self, node.left_child, tree, heap)
+        if node.right_child != _TREE_LEAF:
+            self.recursively_remove_children(self, node.right_child, tree, heap)
+        self.remove_node(node, tree)
+
+    def remove_node(self, node, tree):
         pass
 
+    def recursively_update_parent_alphacriterion(self, node, tree, heap):
+        # Desperately need a link to the node parent!!!
+        pass
+
+    def stopping_criterion(self, heap):
+        if heap.is_empty():
+            return True
+        elif heap.get_max_value() < 0:
+            return True
+        return False
+    '''
+    
         
 # =============================================================================
 # Tree

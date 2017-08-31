@@ -22,6 +22,7 @@ import warnings
 from abc import ABCMeta
 from abc import abstractmethod
 from math import ceil
+from copy import deepcopy
 
 import numpy as np
 from scipy.sparse import issparse
@@ -501,7 +502,31 @@ class BaseDecisionTree(six.with_metaclass(ABCMeta, BaseEstimator)):
         """
         X = self._validate_X_predict(X, check_input)
         return self.tree_.decision_path(X)
-
+    
+    def prune_one_step(self, X, y, check_input=True):
+        """Returns its subtree with one (or more, with equal losses) node deleted      
+        check_is_fitted(self, 'tree_')
+        X = self._validate_X_predict(X, check_input)
+        # ToDo: check y
+        new_tree = deepcopy(self)
+        # ToDo: actual pruning
+        return new_tree
+    
+    def prune_sequence(self, X, y, check_input=True):
+        """Returns nested sequence of its subtrees      
+        """
+        check_is_fitted(self, 'tree_')
+        X = self._validate_X_predict(X, check_input)
+        # ToDo: check y
+        # ToDo: consider using a generator (like in staged_predict)
+        trees = [deepcopy(self)]
+        while trees[-1].tree_.node_count > 1:
+            # ToDo: consider reusing the same TreePrunner for all the trees.
+            # Because TreePrunner does not affect BaseDecisionTree, except its tree_, it will be easy.
+            trees.append(trees[-1].prune_one_step(X, y, check_input))
+        return trees
+        
+    
     @property
     def feature_importances_(self):
         """Return the feature importances.
