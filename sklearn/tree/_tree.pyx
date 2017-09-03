@@ -517,12 +517,12 @@ class TreePruner:
         # initialize parents
         self.parents = [TREE_UNDEFINED] * self.tree.node_count
         for node_id in range(self.tree.node_count):
-            for child_id in (self.tree.children_left[i], self.tree.children_right[i]):
+            for child_id in (self.tree.children_left[node_id], self.tree.children_right[node_id]):
                 if child_id != TREE_LEAF:
                     self.parents[child_id] = node_id
         # initialize impurity and complexity of subtrees
         self.subtree_impurities = [None] * self.tree.node_count
-        self.subtree_complexities = [None] * self.tree.node_count
+        self.subtree_sizes = [None] * self.tree.node_count
         self.relative_gains = [None] * self.tree.node_count
         self.update_relative_gains(self.traverse_bottom_up())
         # initialize live nodes
@@ -555,25 +555,26 @@ class TreePruner:
             right_id = self.tree.children_right[node_id]
             # Only here impurity and complexity are set
             leaf_impurity = self.tree.impurity[node_id] * self.tree.weighted_n_node_samples[node_id]
-            leaf_complexity = 1
+            leaf_size = 1
             if left_id == TREE_LEAF:
                 # ... and right_id == TREE_LEAF
                 impurity = leaf_impurity
-                size = leaf_complexity
+                size = leaf_size
             else:
                 impurity = self.subtree_impurities[left_id] + self.subtree_impurities[right_id]
-                size = leaf_complexity + self.subtree_complexities[left_id] + self.subtree_complexities[right_id]
+                size = leaf_size + self.subtree_sizes[left_id] + self.subtree_sizes[right_id]
             self.subtree_impurities[node_id] = impurity
-            self.subtree_complexities[node_id] = size
+            self.subtree_sizes[node_id] = size
             # what to do with the cost of a leaf?
             if left_id == TREE_LEAF:
                 gain = None
             else:
-                gain = (impurity - leaf_impurity) / (complexity - leaf_complexity)
+                gain = (impurity - leaf_impurity) / (size - leaf_size)
             self.relative_gains[node_id] = gain
 
     def get_worst_gain(self):
-        return min(gain for gain in self.relative_gains gain is not None)
+        # what to do if the tree is a trunk?
+        return min(gain for gain in self.relative_gains if gain is not None)
 
     def get_worst_nodes(self):
         worst_gain = self.get_worst_gain()
@@ -602,8 +603,8 @@ class TreePruner:
         self.update_relative_gains(self.get_predecessors(node_id))
 
     def stopping_criterion(self, heap):
-        if self.relative_gains[0] = None:
-            # the tree is already a trunk
+        if self.relative_gains[0] is None:
+            # the tree is already a trunk, worst_gain is undefined
             return True
         if self.get_worst_gain() > self.alpha:
             return True
