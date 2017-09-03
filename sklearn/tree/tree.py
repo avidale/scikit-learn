@@ -95,8 +95,8 @@ class BaseDecisionTree(six.with_metaclass(ABCMeta, BaseEstimator)):
                  min_impurity_split,
                  class_weight=None,
                  presort=False,
-                 pruning=None,
-                 alpha=None):
+                 pruning=False,
+                 alpha=0.):
         self.criterion = criterion
         self.splitter = splitter
         self.max_depth = max_depth
@@ -325,7 +325,7 @@ class BaseDecisionTree(six.with_metaclass(ABCMeta, BaseEstimator)):
                                                    X_idx_sorted.shape))
 
         # Configure pruning parameters
-        # todo: indeed configure them
+
 
         # Build tree
         criterion = self.criterion
@@ -505,10 +505,14 @@ class BaseDecisionTree(six.with_metaclass(ABCMeta, BaseEstimator)):
         X = self._validate_X_predict(X, check_input)
         return self.tree_.decision_path(X)
 
-    def prune(self):
-        pruner = TreePruner(self.tree_, self.alpha)
-        pruner.prune()
-
+    def prune(self, inplace=True):
+        if inplace:
+            pruner = TreePruner(self.tree_, self.alpha)
+            pruner.prune()
+        else:
+            new_tree = deepcopy(self)
+            new_tree.prune()
+            return new_tree
 
     def prune_one_step(self, X, y, check_input=True):
         """Returns its subtree with one (or more, with equal losses) node deleted      
@@ -775,8 +779,8 @@ class DecisionTreeClassifier(BaseDecisionTree, ClassifierMixin):
                  min_impurity_split=None,
                  class_weight=None,
                  presort=False,
-                 pruning=None,
-                 alpha=None):
+                 pruning=False,
+                 alpha=0.):
         super(DecisionTreeClassifier, self).__init__(
             criterion=criterion,
             splitter=splitter,
@@ -1115,8 +1119,8 @@ class DecisionTreeRegressor(BaseDecisionTree, RegressorMixin):
                  min_impurity_decrease=0.,
                  min_impurity_split=None,
                  presort=False,
-                 pruning=None,
-                 alpha=None):
+                 pruning=False,
+                 alpha=0.):
         super(DecisionTreeRegressor, self).__init__(
             criterion=criterion,
             splitter=splitter,
