@@ -543,9 +543,14 @@ class TreePruner:
         """Prune worst subtree(s) of the decision tree
         """
         while not self.stopping_criterion():
-            for node_id in self.get_worst_nodes():
-                if self.live_nodes[node_id]:
-                    self.make_node_leaf(node_id)
+            self.prune_one_step()
+
+    def
+
+    def prune_one_step(self):
+        for node_id in self.get_worst_nodes():
+            if self.live_nodes[node_id]:
+                self.make_node_leaf(node_id)
 
     def update_relative_gains(self, node_ids):
         """ The only place where impurity, complexity, and gain are modified
@@ -569,7 +574,7 @@ class TreePruner:
             if left_id == TREE_LEAF:
                 gain = None
             else:
-                gain = (impurity - leaf_impurity) / (size - leaf_size)
+                gain = (leaf_impurity - impurity) / (size - leaf_size)
             self.relative_gains[node_id] = gain
 
     def get_worst_gain(self):
@@ -578,7 +583,7 @@ class TreePruner:
 
     def get_worst_nodes(self):
         worst_gain = self.get_worst_gain()
-        return [node_id for node_id, gain in self.relative_gains if gain == worst_gain]
+        return [node_id for node_id, gain in enumerate(self.relative_gains) if gain == worst_gain]
 
     def remove_ancestors(self, node_id):
         """Mark all ancestors of the node as dead
@@ -589,8 +594,10 @@ class TreePruner:
         left_id = self.tree.children_left[node_id]
         right_id = self.tree.children_right[node_id]
         if left_id != TREE_LEAF: # and right_id != TREE_LEAF
+            self.tree.children_left[node_id] = TREE_LEAF
+            self.tree.children_right[node_id] = TREE_LEAF
             for child_id in (left_id, right_id):
-                self.recursively_remove_children(self, child_id)
+                self.remove_ancestors(child_id)
                 # mark node as dead
                 self.live_nodes[child_id] = False
 
@@ -598,11 +605,9 @@ class TreePruner:
         """ removes ancestors of node_id
         """
         self.remove_ancestors(node_id)
-        self.tree.left_id = TREE_LEAF
-        self.tree.right_id = TREE_LEAF
         self.update_relative_gains(self.get_predecessors(node_id))
 
-    def stopping_criterion(self, heap):
+    def stopping_criterion(self):
         if self.relative_gains[0] is None:
             # the tree is already a trunk, worst_gain is undefined
             return True

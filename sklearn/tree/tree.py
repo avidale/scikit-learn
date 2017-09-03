@@ -95,8 +95,8 @@ class BaseDecisionTree(six.with_metaclass(ABCMeta, BaseEstimator)):
                  min_impurity_split,
                  class_weight=None,
                  presort=False,
-                 pruning = None,
-                 alpha = None):
+                 pruning=None,
+                 alpha=None):
         self.criterion = criterion
         self.splitter = splitter
         self.max_depth = max_depth
@@ -323,6 +323,9 @@ class BaseDecisionTree(six.with_metaclass(ABCMeta, BaseEstimator)):
                              "the shape of X_idx_sorted (X_idx_sorted"
                              ".shape = {})".format(X.shape,
                                                    X_idx_sorted.shape))
+
+        # Configure pruning parameters
+        # todo: indeed configure them
 
         # Build tree
         criterion = self.criterion
