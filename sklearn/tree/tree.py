@@ -523,7 +523,7 @@ class BaseDecisionTree(six.with_metaclass(ABCMeta, BaseEstimator)):
         trees = [deepcopy(self)]
         while trees[-1].tree_.node_count > 1:
             # ToDo: consider reusing the same TreePrunner for all the trees.
-            # Because TreePrunner does not affect BaseDecisionTree, except its tree_, it will be easy.
+            # Because TreePruner does not affect BaseDecisionTree, except its tree_, it will be easy.
             trees.append(trees[-1].prune_one_step(X, y, check_input))
         return trees
         

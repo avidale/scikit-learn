@@ -500,19 +500,34 @@ cdef class BestFirstTreeBuilder(TreeBuilder):
         return 0
 
 
-        
-cdef class TreePrunner:
+
+class TreePruner:
     """Prune a decision tree with weakest link pruning.
-
-    The best node to prune is given by the node that has the
-    lowest impurity improvement.
-
-    Prunner may be reused multiple times, to create a sequence of trees.
-    In this case, copy of tree is returned.
+    The best subtree to prune is one with the lowest impurity improvement per node count.
+    Pruner may be reused multiple times, to create a sequence of trees or until some criterion is met.
+    However, its tree is modified inplace
     """
-    def __cinit__(self, Splitter splitter, DOUBLE_t alpha):
-        self.splitter = splitter
+    def __init__(self, tree, alpha, X = None, y = None, sample_weight=None):
+        """
+        X and y may be used to recalculate node impurities
+        # todo: calculate impurities somewhere out of the prunner!
+        """
+        self.tree = tree
         self.alpha = alpha
+        # initialize parents
+        self.parents = [TREE_UNDEFINED] * self.tree.node_count
+        for node_id in range(self.tree.node_count):
+            for child_id in (self.tree.children_left[i], self.tree.children_right[i]):
+                if child_id != TREE_LEAF:
+                    self.parents[child_id] = node_id
+        # initialize impurity and complexity of subtrees
+        self.subtree_impurities = [None] * self.tree.node_count
+        self.subtree_complexities = [None] * self.tree.node_count
+        self.relative_gains = [None] * self.tree.node_count
+        self.update_relative_gains(self.traverse_bottom_up())
+        # initialize live nodes
+        self.live_nodes = [True] * self.tree.node_count
+
 
     """
     Need to know:
@@ -524,56 +539,93 @@ cdef class TreePrunner:
         how to safely copy a tree?????
     """
 
-    def prune(self, tree, X, y, sample_weight=None, copy_tree=False):
-        """Prune a decision tree with the training set (X, y).
+    def prune_worst(self):
+        """Prune worst subtree(s) of the decision tree
         """
-        # todo: separate initialization from one pruning step
+        while not self.stopping_criterion():
+            for node_id in self.get_worst_nodes():
+                if self.live_nodes[node_id]:
+                    self.make_node_leaf(node_id)
 
-        if copy_tree:
-            tree = deepcopy(tree) # todo: import deepcopy
+    def update_relative_gains(self, node_ids):
+        """ The only place where impurity, complexity, and gain are modified
+        """
+        for node_id in node_ids:
+            left_id = self.tree.children_left[node_id]
+            right_id = self.tree.children_right[node_id]
+            # Only here impurity and complexity are set
+            leaf_impurity = self.tree.impurity[node_id] * self.tree.weighted_n_node_samples[node_id]
+            leaf_complexity = 1
+            if left_id == TREE_LEAF:
+                # ... and right_id == TREE_LEAF
+                impurity = leaf_impurity
+                size = leaf_complexity
+            else:
+                impurity = self.subtree_impurities[left_id] + self.subtree_impurities[right_id]
+                size = leaf_complexity + self.subtree_complexities[left_id] + self.subtree_complexities[right_id]
+            self.subtree_impurities[node_id] = impurity
+            self.subtree_complexities[node_id] = size
+            # what to do with the cost of a leaf?
+            if left_id == TREE_LEAF:
+                gain = None
+            else:
+                gain = (impurity - leaf_impurity) / (complexity - leaf_complexity)
+            self.relative_gains[node_id] = gain
 
-        heap = UpdateableHeap() # todo: import UpdateableHeap
-        for node in tree.nodes:
-            calculate size of a subtree
-            calculate impurity in the node
-            calculate impurity in the subtree
-            add node to the heap with key = alphacriterion
-        while not self.stopping_criterion(heap):
-            node = heap.get_and_remove_min()
-            self.recursively_remove_children(node, tree, heap)
-            self.recursively_update_parent_alphacriterion(node, tree, heap)
-            self.remove_node(node, tree)
+    def get_worst_gain(self):
+        return min(gain for gain in self.relative_gains gain is not None)
 
-        self.heap = heap # will need it for future prunning
+    def get_worst_nodes(self):
+        worst_gain = self.get_worst_gain()
+        return [node_id for node_id, gain in self.relative_gains if gain == worst_gain]
 
-        if copy_tree:
-            return tree
+    def remove_ancestors(self, node_id):
+        """Mark all ancestors of the node as dead
+        """
+        # exclude the node from gain calculation
+        self.relative_gains[node_id] = None
+        # remove children
+        left_id = self.tree.children_left[node_id]
+        right_id = self.tree.children_right[node_id]
+        if left_id != TREE_LEAF: # and right_id != TREE_LEAF
+            for child_id in (left_id, right_id):
+                self.recursively_remove_children(self, child_id)
+                # mark node as dead
+                self.live_nodes[child_id] = False
 
-
-
-
-    def recursively_remove_children(self, node, tree, heap):
-        # todo: do not mix indices and actual nodes
-        if node.left_child != _TREE_LEAF:
-            self.recursively_remove_children(self, node.left_child, tree, heap)
-        if node.right_child != _TREE_LEAF:
-            self.recursively_remove_children(self, node.right_child, tree, heap)
-        self.remove_node(node, tree)
-
-    def remove_node(self, node, tree):
-        pass
-
-    def recursively_update_parent_alphacriterion(self, node, tree, heap):
-        # Desperately need a link to the node parent!!!
-        pass
+    def make_node_leaf(self, node_id):
+        """ removes ancestors of node_id
+        """
+        self.remove_ancestors(node_id)
+        self.tree.left_id = TREE_LEAF
+        self.tree.right_id = TREE_LEAF
+        self.update_relative_gains(self.get_predecessors(node_id))
 
     def stopping_criterion(self, heap):
-        if heap.is_empty():
+        if self.relative_gains[0] = None:
+            # the tree is already a trunk
             return True
-        elif heap.get_max_value() < 0:
+        if self.get_worst_gain() > self.alpha:
             return True
         return False
-    '''
+
+    def traverse_bottom_up(self):
+        """ Iterable of node indices in such order that children are always before the parents
+        """
+        # Current implementation assumes that by construction children go after parents.
+        return list(reversed(range(self.tree.node_count)))
+
+    def get_predecessors(self, node_id):
+        predecessors = [node_id]
+        while True:
+            node_id = self.parents[node_id]
+            if node_id == TREE_UNDEFINED:
+                break
+            predecessors.append(node_id)
+        return predecessors
+
+    def get_new_tree(self):
+        return self.tree
     
         
 # =============================================================================
