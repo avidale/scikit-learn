@@ -539,7 +539,7 @@ class TreePruner:
         how to safely copy a tree?????
     """
 
-    def prune_worst(self):
+    def prune(self):
         """Prune worst subtree(s) of the decision tree
         """
         while not self.stopping_criterion():

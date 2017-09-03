@@ -41,7 +41,7 @@ from ._criterion import Criterion
 from ._splitter import Splitter
 from ._tree import DepthFirstTreeBuilder
 from ._tree import BestFirstTreeBuilder
-from ._tree import TreePrunner
+from ._tree import TreePruner
 from ._tree import Tree
 from . import _tree, _splitter, _criterion
 
@@ -370,8 +370,7 @@ class BaseDecisionTree(six.with_metaclass(ABCMeta, BaseEstimator)):
         if self.pruning is not None: 
             # ToDo: Need to check pruning!
             # ToDo: Need to check alpha!
-            prunner = TreePrunner(splitter, self.alpha) 
-            prunner.prune(self.tree_, X, y, sample_weight, X_idx_sorted) # is X_idx_sorted really needed?
+            self.prune()
 
         if self.n_outputs_ == 1:
             self.n_classes_ = self.n_classes_[0]
@@ -502,7 +501,12 @@ class BaseDecisionTree(six.with_metaclass(ABCMeta, BaseEstimator)):
         """
         X = self._validate_X_predict(X, check_input)
         return self.tree_.decision_path(X)
-    
+
+    def prune(self):
+        pruner = TreePruner(self.tree_, self.alpha)
+        pruner.prune()
+
+
     def prune_one_step(self, X, y, check_input=True):
         """Returns its subtree with one (or more, with equal losses) node deleted      
         """
