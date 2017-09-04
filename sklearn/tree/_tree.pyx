@@ -545,8 +545,6 @@ class TreePruner:
         while not self.stopping_criterion():
             self.prune_one_step()
 
-    def
-
     def prune_one_step(self):
         for node_id in self.get_worst_nodes():
             if self.live_nodes[node_id]:
@@ -602,7 +600,7 @@ class TreePruner:
                 self.live_nodes[child_id] = False
 
     def make_node_leaf(self, node_id):
-        """ removes ancestors of node_id
+        """ removes ancestors of node and updates the pruner
         """
         self.remove_ancestors(node_id)
         self.update_relative_gains(self.get_predecessors(node_id))
@@ -630,8 +628,35 @@ class TreePruner:
             predecessors.append(node_id)
         return predecessors
 
-    def get_new_tree(self):
-        return self.tree
+    def compress_tree(self):
+        """Remove all dead nodes from the tree, and reindex it
+        """
+        return
+        node_count = self.tree.node_count
+        vacant_id = 0
+        for node_id in range(node_count):
+            if self.live_nodes[node_id]:
+                if node_id != vacant_id:
+                    pass
+                    """
+                    self.tree.move_node(node_id, vacant_id) # todo: create move_node method
+                    if self.child_types[node_id] = -1:
+                        self.tree.children_left[node_id] = vacant_id
+                    elif self.child_types[node_id] = 1:
+                        self.tree.children_right[node_id] = vacant_id
+                    else:
+                        # I am root
+                        pass
+                    for child_id in (self.tree.children_left[node_id], self.tree.children_right[node_id]):
+                        self.parents[child_id] = vacant_id
+                    #and now compress all the other arrays
+                    """
+                vacant_id += 1
+        self.tree.node_count = vacant_id
+        # resize the tree
+        # resize all the arrays
+
+
     
         
 # =============================================================================
